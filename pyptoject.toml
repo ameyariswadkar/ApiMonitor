@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "api_usage_monitor"
+version = "0.1.0"
+description = "Pipeline for tracking deprecated API usage"
+authors = [{name="Ameya"}]
+dependencies = [
+    "kafka-python",
+    "pyspark",
+    "pyyaml"
+]
