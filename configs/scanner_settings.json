@@ -1,0 +1,14 @@
+{
+  "repos": [
+    "./requests"
+  ],
+  "include_extensions": [".py"],
+  "exclude_dirs": [".git", ".venv", "venv", "__pycache__"],
+  "target_libraries": ["pandas", "numpy", "requests", "urllib3", "socket"],
+  "kafka": {
+    "enabled": true,
+    "bootstrap_servers": "kafka:9092",
+    "topic": "ast.api_calls",
+    "client_id": "api-usage-scanner"
+  }
+}

@@ -1,0 +1,18 @@
+[
+  {
+    "symbol": "pandas.read_table",
+    "library": "pandas",
+    "deprecated_in": "1.4",
+    "removed_in": "2.0",
+    "severity": 3,
+    "replacement": "pandas.read_csv"
+  },
+  {
+    "symbol": "numpy.matrix",
+    "library": "numpy",
+    "deprecated_in": "1.15",
+    "removed_in": "2.0",
+    "severity": 4,
+    "replacement": "numpy.array"
+  }
+]

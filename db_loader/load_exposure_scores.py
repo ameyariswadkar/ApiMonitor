@@ -1,0 +1,154 @@
+"""
+db_loader/load_exposure_scores.py
+
+Load per-repo exposure scores (written by spark_jobs/deprecation_exposure.py)
+from Parquet files into a Postgres table using SQLAlchemy + pandas.
+
+Expected Parquet schema (from deprecation_exposure.py, repo_exposure_df):
+
+    repo                   : string
+    time_window            : timestamp (month-bucket)
+    exposure_score         : long
+    total_deprecated_calls : long
+    unique_deprecated_apis : long
+
+Target SQL table (recommended schema):
+
+    CREATE TABLE IF NOT EXISTS repo_exposure (
+        id                      SERIAL PRIMARY KEY,
+        repo                    TEXT NOT NULL,
+        time_window             TIMESTAMP NOT NULL,
+        exposure_score          BIGINT NOT NULL,
+        total_deprecated_calls  BIGINT NOT NULL,
+        unique_deprecated_apis  BIGINT NOT NULL,
+        last_updated            TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+
+Run (example):
+
+    python -m db_loader.load_exposure_scores \
+        --parquet-path results/exposure_scores \
+        --table repo_exposure \
+        --if-exists append
+"""
+
+from __future__ import annotations
+
+import argparse
+import logging
+from pathlib import Path
+
+import pandas as pd
+
+from db_loader.connection import get_engine
+
+
+logger = logging.getLogger(__name__)
+if not logger.handlers:
+    logger.setLevel(logging.INFO)
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
+    logger.addHandler(handler)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Load repo exposure score Parquet files into a Postgres table."
+    )
+    parser.add_argument(
+        "--parquet-path",
+        default="results/exposure_scores",
+        help="Directory containing repo exposure Parquet files (from deprecation_exposure.py).",
+    )
+    parser.add_argument(
+        "--table",
+        default="repo_exposure",
+        help="Target SQL table name. Default: repo_exposure",
+    )
+    parser.add_argument(
+        "--if-exists",
+        choices=["fail", "replace", "append"],
+        default="append",
+        help="Behavior if the table already exists. Default: append",
+    )
+    parser.add_argument(
+        "--chunksize",
+        type=int,
+        default=5_000,
+        help="Optional chunk size for batched to_sql writes. Default: 5000",
+    )
+    return parser.parse_args()
+
+
+def load_parquet_to_db(
+    parquet_path: str | Path,
+    table: str,
+    if_exists: str = "append",
+    chunksize: int | None = 5_000,
+) -> None:
+    """
+    Read all Parquet files under parquet_path into a pandas DataFrame,
+    then write them into the given SQL table.
+    """
+    root = Path(parquet_path)
+    if not root.exists():
+        raise FileNotFoundError(f"Parquet path does not exist: {root}")
+
+    parquet_files = sorted(root.rglob("*.parquet"))
+    if not parquet_files:
+        logger.info("No Parquet files found under %s, nothing to load.", root)
+        return
+
+    logger.info("Found %d Parquet file(s) under %s", len(parquet_files), root)
+
+    dfs = []
+    for p in parquet_files:
+        logger.info("Reading %s", p)
+        df_part = pd.read_parquet(p)
+        dfs.append(df_part)
+
+    df = pd.concat(dfs, ignore_index=True)
+    logger.info("Total rows to load: %d", len(df))
+
+    expected_cols = {
+        "repo",
+        "time_window",
+        "exposure_score",
+        "total_deprecated_calls",
+        "unique_deprecated_apis",
+    }
+    missing = expected_cols - set(df.columns)
+    if missing:
+        raise ValueError(f"Missing expected columns in Parquet data: {missing}")
+
+    engine = get_engine()
+    logger.info(
+        "Writing to table '%s' with if_exists='%s', chunksize=%s",
+        table,
+        if_exists,
+        chunksize,
+    )
+
+    df.to_sql(
+        table,
+        engine,
+        if_exists=if_exists,
+        index=False,
+        chunksize=chunksize,
+    )
+
+    logger.info("Successfully loaded %d rows into '%s'.", len(df), table)
+
+
+def main() -> None:
+    args = parse_args()
+    load_parquet_to_db(
+        parquet_path=args.parquet_path,
+        table=args.table,
+        if_exists=args.if_exists,
+        chunksize=args.chunksize,
+    )
+
+
+if __name__ == "__main__":
+    main()
