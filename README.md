@@ -20,7 +20,7 @@ aggregation - Airflow for orchestration - Postgres for persistence
 
 ## Architecture
 
-<pre> ```text
+<pre>
 
                     +----------------------------------+
                     |            Airflow               |
@@ -47,7 +47,7 @@ aggregation - Airflow for orchestration - Postgres for persistence
                                 |   Postgres    |
                                 +---------------+
 
-  ``` </pre>
+</pre>
 ------------------------------------------------------------------------
 
 ## Features
