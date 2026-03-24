@@ -20,6 +20,8 @@ aggregation - Airflow for orchestration - Postgres for persistence
 
 ## Architecture
 
+<pre> ```text
+
                     +----------------------------------+
                     |            Airflow               |
                     |   (DAG Orchestrator / Control)   |
@@ -45,6 +47,7 @@ aggregation - Airflow for orchestration - Postgres for persistence
                                 |   Postgres    |
                                 +---------------+
 
+  ``` </pre>
 ------------------------------------------------------------------------
 
 ## Features
