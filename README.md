@@ -22,7 +22,7 @@ aggregation - Airflow for orchestration - Postgres for persistence
 
 <pre>
 
-                   +--------------------+
++--------------------+
 |      Airflow       |
 |  Orchestrates DAG  |
 +---------+----------+
